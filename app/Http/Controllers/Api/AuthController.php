@@ -95,4 +95,48 @@ class AuthController extends Controller
             return response()->json(['errors' => 'Code Anda Telah Expired'], 400);
         }
     }
+
+    public function resendCode(Request $request)
+    {
+        $data = $request->all();
+
+        $validator = Validator::make($data, [
+            'email' => 'required|email',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->messages()], 400);
+        }
+
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'Email Anda Belum Terdaftar'], 409);
+        }
+        if ($user->email_verified_at != null) {
+            return response()->json(['errors' => "Email Anda telah Terverifikasi"], 400);
+        }
+
+        DB::beginTransaction();
+        try {
+            //send code
+            $verificationCode = random_int(1000, 9999);
+            // $expiration = Carbon::now()->addMinutes(5)->translatedFormat('d F Y H:i:s');
+            $expiration = Carbon::now()->addMinutes(5);
+
+            $user->verify_code = $verificationCode;
+            $user->verify_exprired_at = $expiration;
+            $user->save();
+
+            DB::commit();
+            Mail::to($request->email)->send(new VerificationEmail($data, $verificationCode, $expiration));
+            return response()->json([
+                'message' => 'Succes',
+                "code_verification" => $verificationCode,
+                "expired_code_at" => $expiration
+            ], 200);
+        } catch (\Throwable $th) {
+            DB::rollback();
+            return response()->json(['message' => $th->getMessage()], 500);
+        }
+    }
 }

@@ -20,3 +20,4 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 Route::post('register', [AuthController::class, 'register']);
 Route::post('verifyCode', [AuthController::class, 'verifyCode']);
+Route::post('resendCode', [AuthController::class, 'resendCode']);
