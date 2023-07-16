@@ -21,12 +21,14 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'phone',
         'email_verified_at',
         'verified',
         'profile_picture',
         'ktp',
         'verify_code',
         'verify_exprired_at',
+        'code_referal'
     ];
 
     /**

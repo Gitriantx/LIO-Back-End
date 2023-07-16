@@ -139,4 +139,56 @@ class AuthController extends Controller
             return response()->json(['message' => $th->getMessage()], 500);
         }
     }
+
+    public function registerNext(Request $request)
+    {
+        $data = $request->all();
+
+        $validator = Validator::make($data, [
+            'email' => 'required|email',
+            'name' => 'required|string',
+            'pin' => 'required|digits:6',
+            'profile_picture' => 'required',
+            'ktp' => 'required',
+            'phone' => 'required|string'
+
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->messages()], 400);
+        }
+        $user = User::where('email', $request->email)->first();
+        if (!$user) {
+            return response()->json(['message' => 'Email Anda Belum Terdaftar'], 409);
+        }
+
+        DB::beginTransaction();
+        try {
+            $profile_picture = null;
+            if ($request->profile_picture) {
+                $profile_picture = uploadBase64Image($request->profile_picture);
+            }
+
+            $ktp = null;
+            if ($request->ktp) {
+                $ktp = uploadBase64Image($request->ktp);
+            }
+
+            $user->name = $request->name;
+            $user->pin = $request->pin;
+            $user->profile_picture = $profile_picture;
+            $user->ktp = $ktp;
+            $user->phone = $request->phone;
+            $user->code_referal = $request->code_referal;
+            $user->save();
+
+            DB::commit();
+            return response()->json([
+                'message' => 'Succes, Silahkan Melakukan Login',
+            ], 200);
+        } catch (\Throwable $th) {
+            DB::rollback();
+            return response()->json(['message' => $th->getMessage()], 500);
+        }
+    }
 }
