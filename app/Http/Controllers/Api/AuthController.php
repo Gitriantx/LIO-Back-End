@@ -10,6 +10,8 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
+use JWTAuth;
+use Tymon\JWTAuth\Exceptions\JWTException;
 
 
 class AuthController extends Controller
@@ -175,7 +177,8 @@ class AuthController extends Controller
             }
 
             $user->name = $request->name;
-            $user->pin = $request->pin;
+            // $user->pin = $request->pin;
+            $user->password = bcrypt($request->pin);
             $user->profile_picture = $profile_picture;
             $user->ktp = $ktp;
             $user->phone = $request->phone;
@@ -189,6 +192,37 @@ class AuthController extends Controller
         } catch (\Throwable $th) {
             DB::rollback();
             return response()->json(['message' => $th->getMessage()], 500);
+        }
+    }
+
+    public function login(Request $request)
+    {
+        $credentials = $request->only('email', 'password');
+
+        $validator = Validator::make($credentials, [
+            'email' => 'required|email',
+            'password' => 'required|string|digits:6'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->messages()], 400);
+        }
+
+        try {
+            $token = JWTAuth::attempt($credentials);
+
+            if (!$token) {
+                return response()->json(['message' => 'Login credentials are invalid'], 400);
+            }
+
+            $userResponse = getUser($request->email);
+            $userResponse->token = $token;
+            $userResponse->token_expires_in = auth()->factory()->getTTL() * 60;
+            $userResponse->token_type = 'bearer';
+
+            return response()->json($userResponse);
+        } catch (JWTException $e) {
+            return response()->json(['message' => $e->getMessage()], 500);
         }
     }
 }
