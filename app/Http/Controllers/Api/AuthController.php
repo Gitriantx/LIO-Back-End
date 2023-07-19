@@ -28,10 +28,18 @@ class AuthController extends Controller
             return response()->json(['errors' => $validator->messages()], 400);
         }
 
-        $user = User::where('email', $request->email)->exists();
+        $user = User::where('email', $request->email)->first();
 
-        if ($user) {
-            return response()->json(['message' => 'Email already taken'], 409);
+        if ($user && $user->email_verified_at != null && $user->password == null) {
+            return response()->json([
+                'message' => 'Email Anda Telah Terverifikasi, Silahkan lanjutkan Registrasi',
+                'email' => $user->email
+            ], 409);
+        }
+        if ($user && $user->email_verified_at != null && $user->password != null) {
+            return response()->json([
+                'message' => 'Email Telah Teregistrasi, Silahkan melakukan login'
+            ], 409);
         }
 
         DB::beginTransaction();
@@ -87,6 +95,7 @@ class AuthController extends Controller
                     DB::commit();
                     return response()->json([
                         'message' => 'Succes, Silahkan Melanjutkan Registrasi',
+                        'email' => $request->email,
                     ], 200);
                 } catch (\Throwable $th) {
                     DB::rollback();
@@ -151,7 +160,7 @@ class AuthController extends Controller
         $validator = Validator::make($data, [
             'email' => 'required|email',
             'name' => 'required|string',
-            'pin' => 'required|digits:6',
+            'password' => 'required|digits:6',
             'profile_picture' => 'required',
             'ktp' => 'required',
             'phone' => 'required|string'
@@ -180,7 +189,7 @@ class AuthController extends Controller
 
             $user->name = $request->name;
             // $user->pin = $request->pin;
-            $user->password = bcrypt($request->pin);
+            $user->password = bcrypt($request->password);
             $user->profile_picture = $profile_picture;
             $user->ktp = $ktp;
             $user->phone = $request->phone;
