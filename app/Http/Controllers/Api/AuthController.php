@@ -50,6 +50,7 @@ class AuthController extends Controller
             Mail::to($request->email)->send(new VerificationEmail($data, $verificationCode, $expiration));
             return response()->json([
                 'message' => 'Succes',
+                'email' => $request->email,
                 "code_verification" => $verificationCode,
                 "expired_code_at" => $expiration
             ], 200);
@@ -133,6 +134,7 @@ class AuthController extends Controller
             Mail::to($request->email)->send(new VerificationEmail($data, $verificationCode, $expiration));
             return response()->json([
                 'message' => 'Succes',
+                'email' => $request->email,
                 "code_verification" => $verificationCode,
                 "expired_code_at" => $expiration
             ], 200);
